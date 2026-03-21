@@ -16,6 +16,7 @@ import argparse
 import os
 from typing import Optional, Type
 
+import numpy as np
 import rerun as rr  # @manual
 from data_loaders.loader_hand_poses import HandType
 from data_loaders.loader_object_library import load_object_library
@@ -139,8 +140,10 @@ def execute_rerun(
     #
     # Loop over the timestamps of the sequence and visualize corresponding data
     for timestamp in tqdm(timestamps[timestamps_slice]):
-        rr.set_time_nanos("synchronization_time", int(timestamp))
-        rr.set_time_sequence("timestamp", timestamp)
+        rr.set_time(
+            "synchronization_time", duration=np.timedelta64(int(timestamp), "ns")
+        )
+        rr.set_time("timestamp", sequence=timestamp)
 
         rr_visualizer.log_dynamic_assets(image_stream_ids, timestamp)
 
