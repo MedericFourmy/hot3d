@@ -350,7 +350,7 @@ def process_clip(clip, clips_input_dir, scenes_output_dir, args):
                     if px_count_visib > 0:
                         ys, xs = np.asarray(mask_visib).nonzero()
                         im_size = mask_visib.size
-                        bbox_visib = misc.calc_2d_bbox(xs, ys, im_size)
+                        bbox_visib = calc_2d_bbox(xs, ys, im_size)
                         bbox_visib = [int(x) for x in bbox_visib]
                     else:
                         bbox_visib = [-1, -1, -1, -1]
