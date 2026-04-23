@@ -28,13 +28,45 @@ import tarfile
 
 import cv2
 import numpy as np
-from bop_toolkit_lib import misc
 from PIL import Image
 from tqdm import tqdm
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, parent_dir)
 import clip_util
+
+
+def clip_pt_to_im(pt, im_size):
+    """Clips a 2D point to the image frame.
+
+    Copied from https://github.com/thodan/bop_toolkit/blob/master/bop_toolkit_lib/misc.py.
+
+    :param pt: 2D point (x, y).
+    :param im_size: Image size (width, height).
+    :return: Clipped 2D point (x, y).
+    """
+    return [min(max(pt[0], 0), im_size[0] - 1), min(max(pt[1], 0), im_size[1] - 1)]
+
+
+def calc_2d_bbox(xs, ys, im_size=None, clip=False):
+    """Calculates 2D bounding box of the given set of 2D points.
+
+    Copied from https://github.com/thodan/bop_toolkit/blob/master/bop_toolkit_lib/misc.py.
+
+    :param xs: 1D ndarray with x-coordinates of 2D points.
+    :param ys: 1D ndarray with y-coordinates of 2D points.
+    :param im_size: Image size (width, height) (used for optional clipping).
+    :param clip: Whether to clip the bounding box (default == False).
+    :return: 2D bounding box (x, y, w, h), where (x, y) is the top-left corner
+      and (w, h) is width and height of the bounding box.
+    """
+    bb_min = [xs.min(), ys.min()]
+    bb_max = [xs.max(), ys.max()]
+    if clip:
+        assert im_size is not None
+        bb_min = clip_pt_to_im(bb_min, im_size)
+        bb_max = clip_pt_to_im(bb_max, im_size)
+    return [bb_min[0], bb_min[1], bb_max[0] - bb_min[0], bb_max[1] - bb_min[1]]
 
 
 def main():
@@ -154,7 +186,7 @@ def process_clip(clip, clips_input_dir, scenes_output_dir, args):
 
         # Load camera parameters.
         # from FRAME_ID.cameras.json
-        frame_camera = clip_util.load_cameras(tar, frame_key)
+        cameras, Ts_device_from_camera = clip_util.load_cameras(tar, frame_key)
         ## read FRAME_ID.objects.json
         frame_objects = clip_util.load_object_annotations(tar, frame_key)
 
@@ -186,7 +218,7 @@ def process_clip(clip, clips_input_dir, scenes_output_dir, args):
             # filling scene_camera.json
 
             # get T_world_from_camera
-            T_world_from_camera = frame_camera[stream_id].T_world_from_eye
+            T_world_from_camera = Ts_device_from_camera[stream_id]
 
             T_world_to_camera = np.linalg.inv(T_world_from_camera)
 
@@ -208,7 +240,7 @@ def process_clip(clip, clips_input_dir, scenes_output_dir, args):
             }
 
             # Camera parameters of the current image.
-            # camera_model = frame_camera[stream_id]
+            # camera_model = cameras[stream_id]
 
             frame_scene_gt_data = []
             frame_scene_gt_info_data = []
